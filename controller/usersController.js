@@ -15,21 +15,6 @@ function validation(req,res,next){
             message : 'password is empty'
         })
     }
-    else if(req.body.image === null){
-        next({status : 201,
-            message : 'image is empty'
-        })
-    }
-    else if(req.body.firstname === null){
-        next({status : 201,
-            message : 'firstname is empty'
-        })
-    }
-    else if(req.body.lastname === null){
-        next({status : 201,
-            message : 'lastname is empty'
-        })
-    }
     // console.log(req.body.username);
     userModel.user.findOne({
     where:{username:req.body.username}
@@ -73,8 +58,8 @@ function registerUser(req, res, next){
     userModel.user.create({
         username:req.body.username,
         password:req.userHash,
-        firstname:req.body.firstname,
-        lastname:req.body.lastname,
+        phone:req.body.phone,
+        email:req.body.email,
         image:req.body.image
     })
     .then(function(result){
@@ -166,6 +151,43 @@ function jwtTokenGen(req,res){
     // console.log(jwt);
 }
 
+function verifyUser(req,res,next){
+    let authHeader = req.headers.authorization;
+    if (!authHeader) {
+        let err = new Error("Bearer token is not set!");
+        err.status = 401;
+        return next(err);
+    }
+    var token = authHeader.slice(7,req.headers.authorization.length)
+    let data;
+    try {
+        data = jwt.verify(token, 'bikesh');
+    } catch (err) {
+        throw new Error('Token could not be verified!');
+    }
+    userModel.user.findOne({
+        where:{id:data._id}
+    })
+        .then((user) => {
+            req.user = user;
+            next();
+        })
+}
+
+function userDetail(req,res,next){
+    console.log(req.user);
+    res.json({ id: req.user.id, phone: req.user.phone, email: req.user.email, username: req.user.username, image: req.user.image });
+}
+
+function userIdDetail(req, res, next){
+    userModel.user.findOne({
+        where:{id:req.body.userId}
+    })
+    .then((user)=>{
+        res.json({id: user.id, phone: user.phone, email: user.email, username: user.username, image: user.image})
+    })
+}
+
 
 /*----------------------------------------------------------------------------------*/
 // export----------------------
@@ -175,5 +197,8 @@ module.exports = {
     registerUser,
     validator,
     passwordCheck,
-    jwtTokenGen
+    jwtTokenGen,
+    verifyUser,
+    userDetail,
+    userIdDetail
 }
